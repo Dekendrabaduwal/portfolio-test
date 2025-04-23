@@ -119,7 +119,7 @@
 <body>
     <div id="modeSelection" class="mode-selection">
         <h2>Choose Game Mode</h2>
-        <button id="computerMode">Computer</button>
+        <button id="DekendraMode">Play with Dekendra</button>
         <button id="friendsMode">Friends</button>
     </div>
 
@@ -136,7 +136,7 @@
         const resetButton = document.getElementById('reset');
         const container = document.querySelector('.container');
         const modeSelection = document.getElementById('modeSelection');
-        const computerModeBtn = document.getElementById('computerMode');
+        const DekendraModeBtn = document.getElementById('DekendraMode');
         const friendsModeBtn = document.getElementById('friendsMode');
         let currentPlayer = 'X';
         let gameActive = true;
@@ -182,9 +182,9 @@
 
             currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
 
-            // If playing against computer and it's computer's turn, let the computer play
-            if (gameMode === 'computer' && currentPlayer === 'O') {
-                setTimeout(computerMove, 500);
+            // If playing against Dekendra and it's Dekendra's turn, let the Dekendra play
+            if (gameMode === 'Dekendra' && currentPlayer === 'O') {
+                setTimeout(DekendraMove, 500);
             }
         }
 
@@ -202,8 +202,8 @@
             result.classList.remove('celebration');
             board.innerHTML = '';
             createBoard();
-            if (gameMode === 'computer' && currentPlayer === 'O') {
-                setTimeout(computerMove, 500);
+            if (gameMode === 'Dekendra' && currentPlayer === 'O') {
+                setTimeout(DekendraMove, 500);
             }
         }
 
@@ -230,11 +230,11 @@
             return null;
         }
 
-        function computerMove() {
+        function DekendraMove() {
             if (!gameActive) return;
             let moveIndex = null;
             
-            // 1. Check if computer can win in the next move
+            // 1. Check if Dekendra can win in the next move
             moveIndex = findWinningMove('O');
             
             // 2. Block player's winning move if imminent
@@ -288,10 +288,10 @@
             currentPlayer = 'X';
         }
 
-        computerModeBtn.addEventListener('click', () => {
-            gameMode = 'computer';
+        DekendraModeBtn.addEventListener('click', () => {
+            gameMode = 'Dekendra';
             playerXName = prompt("Enter your name:", "Player X") || "Player X";
-            playerOName = "Computer";
+            playerOName = "Dekendra";
             alert(`${playerXName} will play as X and ${playerOName} will play as O. Let the game begin!`);
             modeSelection.style.display = 'none';
             container.style.display = 'block';
