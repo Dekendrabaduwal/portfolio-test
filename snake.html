@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Snake Game</title>
+    <style>
+        body {
+            background: linear-gradient(to right, #1e3c72, #2a5298);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+        .container {
+            text-align: center;
+            position: relative;
+        }
+        canvas {
+            background: #222;
+            border: 4px solid #fff;
+            border-radius: 8px;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        .score-board {
+            margin-top: 10px;
+            color: #fff;
+            text-shadow: 1px 1px 2px #000;
+        }
+        .score-board p {
+            margin: 5px;
+            font-size: 1.2em;
+        }
+        /* Overlay for start and game over screens */
+        #overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.75);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            text-align: center;
+            cursor: pointer;
+            padding: 20px;
+        }
+        #overlay h1 {
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        #overlay p {
+            margin: 5px;
+            font-size: 1.2em;
+        }
+        #overlay label,
+        #overlay select {
+            font-size: 1.2em;
+            margin: 5px;
+        }
+        @media (max-width: 600px) {
+            .score-board p {
+                font-size: 1em;
+            }
+            #overlay h1 {
+                font-size: 2em;
+            }
+            #overlay p,
+            #overlay label,
+            #overlay select {
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="game"></canvas>
+        <div class="score-board">
+            <p>Score: <span id="score">0</span></p>
+            <p>High Score: <span id="high-score">0</span></p>
+        </div>
+    </div>
+    <!-- Overlay element with level selection -->
+    <div id="overlay">
+        <div id="overlay-content">
+            <h1>Snake Game</h1>
+            <label for="level-select">Select Level:</label>
+            <select id="level-select">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+            <p>Click to Start</p>
+        </div>
+    </div>
+    
+    <script>
+        (function() {
+            const canvas = document.getElementById('game');
+            const ctx = canvas.getContext('2d');
+            let grid = 20;
+            let count = 0;
+            let score = 0;
+            let highScore = localStorage.getItem('snakeHighScore') || 0;
+            document.getElementById('high-score').innerText = highScore;
+            
+            let animationFrameId;
+            let gameRunning = false;
+            
+            // Speed mapping based on difficulty:
+            // Higher value means slower snake (more frames to wait)
+            const speedMapping = {
+                easy: 8,
+                medium: 4,
+                hard: 2
+            };
+            // Default gameSpeedFactor (will be updated when starting)
+            let gameSpeedFactor = speedMapping.medium;
+            
+            // Responsive canvas setup: make canvas a square that fits the viewport (a multiple of grid)
+            function setCanvasSize() {
+                const size = Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.9);
+                const canvasSize = Math.floor(size / grid) * grid;
+                canvas.width = canvasSize;
+                canvas.height = canvasSize;
+            }
+    
+            setCanvasSize();
+            window.addEventListener('resize', setCanvasSize);
+            
+            // Snake state
+            const snake = {
+                x: grid * 5,
+                y: grid * 5,
+                cells: [],
+                maxCells: 4,
+                dx: grid,
+                dy: 0
+            };
+    
+            // Apple position
+            let apple = { 
+                x: grid * 10, 
+                y: grid * 10 
+            };
+            
+            function getRandomInt(min, max) {
+                return Math.floor(Math.random() * (max - min)) + min;
+            }
+            
+            function resetGameState() {
+                score = 0;
+                document.getElementById('score').innerText = score;
+                snake.x = grid * 5;
+                snake.y = grid * 5;
+                snake.cells = [];
+                snake.maxCells = 4;
+                snake.dx = grid;
+                snake.dy = 0;
+                apple.x = getRandomInt(0, canvas.width / grid) * grid;
+                apple.y = getRandomInt(0, canvas.height / grid) * grid;
+            }
+            
+            function gameLoop() {
+                if (!gameRunning) return;
+                animationFrameId = requestAnimationFrame(gameLoop);
+    
+                // Control game speed based on selected level
+                if (++count < gameSpeedFactor) {
+                    return;
+                }
+                count = 0;
+    
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+                // Move snake position
+                snake.x += snake.dx;
+                snake.y += snake.dy;
+    
+                // Wrap snake position across edges
+                if (snake.x < 0) {
+                    snake.x = canvas.width - grid;
+                } else if (snake.x >= canvas.width) {
+                    snake.x = 0;
+                }
+                if (snake.y < 0) {
+                    snake.y = canvas.height - grid;
+                } else if (snake.y >= canvas.height) {
+                    snake.y = 0;
+                }
+    
+                snake.cells.unshift({ x: snake.x, y: snake.y });
+                if (snake.cells.length > snake.maxCells) {
+                    snake.cells.pop();
+                }
+    
+                // Draw apple
+                ctx.fillStyle = 'red';
+                ctx.fillRect(apple.x, apple.y, grid - 1, grid - 1);
+    
+                // Draw snake and check for apple collision and self collision
+                ctx.fillStyle = 'lime';
+                snake.cells.forEach((cell, index) => {
+                    ctx.fillRect(cell.x, cell.y, grid - 1, grid - 1);
+    
+                    if (cell.x === apple.x && cell.y === apple.y) {
+                        snake.maxCells++;
+                        score++;
+                        document.getElementById('score').innerText = score;
+    
+                        apple.x = getRandomInt(0, canvas.width / grid) * grid;
+                        apple.y = getRandomInt(0, canvas.height / grid) * grid;
+    
+                        if (score > highScore) {
+                            highScore = score;
+                            document.getElementById('high-score').innerText = highScore;
+                            localStorage.setItem('snakeHighScore', highScore);
+                        }
+                    }
+    
+                    // Check collision with self
+                    for (let i = index + 1; i < snake.cells.length; i++) {
+                        if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
+                            endGame();
+                        }
+                    }
+                });
+            }
+            
+            function endGame() {
+                gameRunning = false;
+                cancelAnimationFrame(animationFrameId);
+                const overlay = document.getElementById('overlay');
+                overlay.style.display = 'flex';
+                overlay.innerHTML = `<div id="overlay-content">
+                                                                <h1>Game Over</h1>
+                                                                <p>Your score is ${score}</p>
+                                                                <label for="level-select">Select Level:</label>
+                                                                <select id="level-select">
+                                                                    <option value="easy">Easy</option>
+                                                                    <option value="medium" selected>Medium</option>
+                                                                    <option value="hard">Hard</option>
+                                                                </select>
+                                                                <p>Click to Restart</p>
+                                                            </div>`;
+            }
+            
+            function startGame() {
+                // Read selected level from the dropdown (if available)
+                const levelSelect = document.getElementById('level-select');
+                let level = "medium"; // default
+                if (levelSelect) {
+                    level = levelSelect.value;
+                }
+                gameSpeedFactor = speedMapping[level];
+    
+                setCanvasSize();
+                resetGameState();
+                gameRunning = true;
+                document.getElementById('overlay').style.display = 'none';
+                gameLoop();
+            }
+            
+            // Start game when clicking overlay
+            document.getElementById('overlay').addEventListener('click', startGame);
+            
+            // Keyboard controls
+            document.addEventListener('keydown', function(e) {
+                if (e.which === 37 && snake.dx === 0) { // left arrow
+                    snake.dx = -grid;
+                    snake.dy = 0;
+                } else if (e.which === 38 && snake.dy === 0) { // up arrow
+                    snake.dy = -grid;
+                    snake.dx = 0;
+                } else if (e.which === 39 && snake.dx === 0) { // right arrow
+                    snake.dx = grid;
+                    snake.dy = 0;
+                } else if (e.which === 40 && snake.dy === 0) { // down arrow
+                    snake.dy = grid;
+                    snake.dx = 0;
+                }
+            });
+            
+            // Touch controls
+            let touchstartX = 0;
+            let touchstartY = 0;
+            let touchendX = 0;
+            let touchendY = 0;
+            
+            canvas.addEventListener('touchstart', function(e) {
+                touchstartX = e.changedTouches[0].clientX;
+                touchstartY = e.changedTouches[0].clientY;
+            }, false);
+            
+            canvas.addEventListener('touchend', function(e) {
+                touchendX = e.changedTouches[0].clientX;
+                touchendY = e.changedTouches[0].clientY;
+                handleGesture();
+            }, false);
+            
+            function handleGesture() {
+                const diffX = touchendX - touchstartX;
+                const diffY = touchendY - touchstartY;
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    if (diffX > 0 && snake.dx === 0) {
+                        snake.dx = grid;
+                        snake.dy = 0;
+                    } else if (diffX < 0 && snake.dx === 0) {
+                        snake.dx = -grid;
+                        snake.dy = 0;
+                    }
+                } else {
+                    if (diffY > 0 && snake.dy === 0) {
+                        snake.dy = grid;
+                        snake.dx = 0;
+                    } else if (diffY < 0 && snake.dy === 0) {
+                        snake.dy = -grid;
+                        snake.dx = 0;
+                    }
+                }
+            }
+        })();
+    </script>
+</body>
+</html>
